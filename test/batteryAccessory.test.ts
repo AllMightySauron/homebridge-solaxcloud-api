@@ -1,7 +1,7 @@
-import assert = require('assert');
+import assert from 'assert';
 
-import { BATTERY_CHARGING_STATE, SolaxBatteryAccessory } from '../src/batteryAccessory';
-import { createApi, createLog } from './helpers';
+import { BATTERY_CHARGING_STATE, SolaxBatteryAccessory } from '../src/batteryAccessory.js';
+import { createApi, createLog } from './helpers.js';
 
 describe('SolaxBatteryAccessory', () => {
   it('keeps charge state getter in sync after updates', () => {

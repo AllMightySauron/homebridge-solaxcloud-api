@@ -1,6 +1,6 @@
-import { Statistics } from '../src/statistics';
+import { Statistics } from '../src/statistics.js';
 
-import assert = require('assert');
+import assert from 'assert';
 
 describe('Statistics: Smoothing methods', () => {
   const sampleSeries = [1, 3, 5, 3, 7, 6, 8, 5, 8, 8, 4, 5];

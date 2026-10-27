@@ -1,7 +1,7 @@
-import assert = require('assert');
+import assert from 'assert';
 
-import { SolaxPlatformAccessory } from '../src/platformAccessory';
-import { createApi, createLog } from './helpers';
+import { SolaxPlatformAccessory } from '../src/platformAccessory.js';
+import { createApi, createLog } from './helpers.js';
 
 describe('SolaxPlatformAccessory', () => {
   it('exposes normalized model and stable hashed serial information', () => {

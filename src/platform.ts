@@ -1,7 +1,7 @@
 import { AccessoryPlugin, API, StaticPlatformPlugin, Logging, PlatformConfig, APIEvent } from 'homebridge';
 
-import { Util } from './util';
-import { SolaxCloudAPIPlatformInverter, ACCESSORY_KEYS } from './platformInverter';
+import { Util } from './util.js';
+import { SolaxCloudAPIPlatformInverter, ACCESSORY_KEYS } from './platformInverter.js';
 
 /**
  * Valid inverter brands (Solax, QCells)

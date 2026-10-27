@@ -1,10 +1,10 @@
 import { API, Logging, PlatformConfig } from 'homebridge';
 
-import assert = require('assert');
+import assert from 'assert';
 
-import { SolaxCloudAPIPlatform } from '../src/platform';
-import { SolaxCloudAPIPlatformInverter } from '../src/platformInverter';
-import { createApi, createLog } from './helpers';
+import { SolaxCloudAPIPlatform } from '../src/platform.js';
+import { SolaxCloudAPIPlatformInverter } from '../src/platformInverter.js';
+import { createApi, createLog, createMatterApi } from './helpers.js';
 
 interface InverterCreation {
   brand: number;
@@ -71,6 +71,32 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     assert.equal(totalizer.virtual, true);
     assert.equal(totalizer.brandName, 'Solax');
     assert.equal(totalizer.hasBattery, true);
+  });
+
+  it('publishes only applicable meters through Matter', () => {
+    const matter = createMatterApi();
+    const config = {
+      enableHistory: false,
+      pureHomeApp: true,
+      smoothMeters: false,
+      smoothingMethod: 'sma',
+    } as PlatformConfig;
+
+    const inverter = new SolaxCloudAPIPlatformInverter(
+      createLog(),
+      config,
+      createApi(matter.api),
+      0,
+      '',
+      'virtual',
+      'Virtual inverter',
+      false,
+      3,
+      true,
+    );
+
+    assert.equal(matter.registrations.length, 5);
+    assert.equal(inverter.getAccessories().length, 6);
   });
 
   it('creates a virtual totalizer with QCells as brand when all inverters use QCells', () => {

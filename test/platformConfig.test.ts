@@ -1,8 +1,8 @@
 import { Logging, PlatformConfig } from 'homebridge';
 
-import assert = require('assert');
+import assert from 'assert';
 
-import { SolaxCloudAPIPlatform } from '../src/platform';
+import { SolaxCloudAPIPlatform } from '../src/platform.js';
 
 interface TestLog extends Logging {
   errors: string[];

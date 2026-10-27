@@ -1,6 +1,6 @@
 import { AccessoryPlugin, API, CharacteristicEventTypes, CharacteristicGetCallback, Logging, Service } from 'homebridge';
 
-import { SolaxPlatformAccessory } from './platformAccessory';
+import { SolaxPlatformAccessory } from './platformAccessory.js';
 
 /**
  * Enum with possible battery charging states.

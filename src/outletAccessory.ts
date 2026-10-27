@@ -1,11 +1,12 @@
 import { Service, AccessoryPlugin, Logging, Characteristic, CharacteristicGetCallback, API } from 'homebridge';
 
-import { SolaxPlatformAccessory } from './platformAccessory';
+import { SolaxPlatformAccessory } from './platformAccessory.js';
 
-import { Statistics } from './statistics';
+import { Statistics } from './statistics.js';
 
 import fakegato from 'fakegato-history';
 import { FakeGatoHistoryService } from 'fakegato-history';
+import { createRequire } from 'module';
 
 type EveCharacteristic = (new () => Characteristic) & { UUID: string };
 
@@ -19,7 +20,7 @@ interface EveHomeKitTypes {
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+const require = createRequire(import.meta.url);
 const { EveHomeKitTypes } = require('homebridge-lib/EveHomeKitTypes') as {
   EveHomeKitTypes: new (api: API) => EveHomeKitTypes;
 };

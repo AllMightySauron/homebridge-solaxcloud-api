@@ -1,11 +1,12 @@
 import { Service, AccessoryPlugin, Logging, API } from 'homebridge';
 
-import { Util } from './util';
+import { Util } from './util.js';
 
 import os from 'os';
 import hash from 'string-hash-64';
+import { createRequire } from 'module';
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+const require = createRequire(import.meta.url);
 const plugin = require('../package.json');
 
 /**
