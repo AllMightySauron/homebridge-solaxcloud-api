@@ -2,7 +2,7 @@ import { Service, AccessoryPlugin, Logging, CharacteristicGetCallback, API } fro
 
 import util from 'util';
 
-import { SolaxPlatformAccessory } from './platformAccessory';
+import { SolaxPlatformAccessory } from './platformAccessory.js';
 
 /**
  * Motion timeout in seconds.

@@ -1,6 +1,6 @@
-import assert = require('assert');
-import { SolaxOutletAccessory } from '../src/outletAccessory';
-import { createApi, createLog } from './helpers';
+import assert from 'assert';
+import { SolaxOutletAccessory } from '../src/outletAccessory.js';
+import { createApi, createLog } from './helpers.js';
 
 describe('SolaxOutletAccessory', () => {
   function withOutlet(test: (outlet: SolaxOutletAccessory) => void): void {

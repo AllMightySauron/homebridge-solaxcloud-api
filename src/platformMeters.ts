@@ -1,5 +1,5 @@
-import { SolaxLightSensorAccessory } from './lightSensorAccessory';
-import { SolaxOutletAccessory } from './outletAccessory';
+import { SolaxLightSensorAccessory } from './lightSensorAccessory.js';
+import { SolaxOutletAccessory } from './outletAccessory.js';
 
 /**
  * Interface with outlets exposed by the platform.

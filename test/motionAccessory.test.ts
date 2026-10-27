@@ -1,7 +1,7 @@
-import assert = require('assert');
+import assert from 'assert';
 
-import { SolaxMotionAccessory } from '../src/motionAccessory';
-import { createApi, createLog } from './helpers';
+import { SolaxMotionAccessory } from '../src/motionAccessory.js';
+import { createApi, createLog } from './helpers.js';
 
 function sleep(millis: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, millis));
