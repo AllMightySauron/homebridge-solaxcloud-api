@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.0] - 2026-10-27
+### Added
+* Added Matter electrical sensor support for power and cumulative energy in Apple Home.
+### Changed
+* Updated the project for Homebridge 2.4, modern Node.js, TypeScript, and ESM compatibility.
+### Fixed
+* Corrected Matter device registration, measurement schemas, unit conversions, and accessory deduplication.
+
 ## [v2.4.2] - 2026-06-03
 ### Changed
 * Bumped Homebridge Lib dependency.
