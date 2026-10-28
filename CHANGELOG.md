@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.2] - 2026-10-28
+### Fixed
+* Restored smoothed outlet accessories when Matter electrical sensors are enabled.
+* Updated smoothed readings on both outlet accessories and Matter electrical sensors.
+
 ## [v2.5.1] - 2026-10-28
 ### Changed
 * Matter electrical sensors are now created whenever Matter is enabled for the bridge; `pureHomeApp` is no longer required.

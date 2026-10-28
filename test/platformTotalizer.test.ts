@@ -2,6 +2,7 @@ import { API, Logging, PlatformConfig } from 'homebridge';
 
 import assert from 'assert';
 
+import { SolaxOutletAccessory } from '../src/outletAccessory.js';
 import { SolaxCloudAPIPlatform } from '../src/platform.js';
 import { SolaxCloudAPIPlatformInverter } from '../src/platformInverter.js';
 import { createApi, createLog, createMatterApi } from './helpers.js';
@@ -96,7 +97,13 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     );
 
     assert.equal(matter.registrations.length, 10);
-    assert.equal(inverter.getAccessories().length, 6);
+    // Matter sensors are additive: raw and smooth outlets remain published.
+    const outlets = inverter.getAccessories().filter(
+      (accessory): accessory is SolaxOutletAccessory => accessory instanceof SolaxOutletAccessory,
+    );
+
+    assert.equal(inverter.getAccessories().length, 11);
+    assert.equal(outlets.length, 10);
 
     inverter.setRawPower('inverterAC', 123.456);
     inverter.setSmoothPower('inverterAC');
@@ -105,6 +112,7 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
 
     assert.equal(matter.updates.filter(update =>
       update.cluster === 'electricalPowerMeasurement' && update.attributes.activePower === 123456).length, 2);
+    assert.equal(outlets.filter(outlet => outlet.getPowerConsumptionValue() === 123.456).length, 2);
     assert.equal(matter.updates.some(update =>
       update.cluster === 'electricalEnergyMeasurement'), true);
   });
