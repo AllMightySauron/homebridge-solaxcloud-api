@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.1] - 2026-10-28
+### Changed
+* Matter electrical sensors are now created whenever Matter is enabled for the bridge; `pureHomeApp` is no longer required.
+* Renamed the `pureHomeApp` UI option to clarify that it is only a legacy Apple Home fallback.
+* Advertised both Matter and HAP support in the package metadata.
+### Fixed
+* Decoupled Matter power and energy updates from the legacy `pureHomeApp` setting.
+
 ## [v2.5.0] - 2026-10-27
 ### Added
 * Added Matter electrical sensor support for power and cumulative energy in Apple Home.

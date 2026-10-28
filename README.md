@@ -79,9 +79,9 @@ Configuration parameters are described on the table below:
 | `platform`         |  string  |  Platform name (must be SolaxCloudAPI)                                                                                                                                                                                      |     -         |       Y        |
 | `inverters`        |  array   |  Array of configured inverters as objects with `{ brand: string, tokenId: string, name: string, sn: string, hasBattery: boolean }`, where `brand` is "solax" or "qcells", `tokenID` is the access token retrieved from the API page of Solax/QCells Cloud, `name` is the inverter name, used as prefix for accessory naming, `sn` is the inverter registration no. (inverter module SN) and `hasBattery` indicates on whether this inverter is connected to a battery. |     -         |       Y        |
 | `pollingFrequency` |  number  |  Plugin data polling frequency from Solax Cloud (in seconds)                                                                                                                                                                |     300       |       N        |
-| `smoothingMeters`  |  boolean |  Whether to create additional meters by smoothing raw values from Solax Cloud                                                                                                                                               |     true      |       N        |
+| `smoothMeters`     |  boolean |  Whether to create additional meters by smoothing raw values from Solax Cloud                                                                                                                                               |     true      |       N        |
 | `smoothingMethod`  |  string  |  Statistical method to use for smoothing raw values from Solax Cloud (simple or exponential moving average - "sma" or "ema")                                                                                                |     "sma"     |       N        |
-| `pureHomeApp`      |  boolean |  Whether to create meters as standard accessories that can be used on the Home App (power will show as ambient light sensors)                                                                                               |     false     |       N        |
+| `pureHomeApp`      |  boolean |  Legacy fallback that exposes power as ambient light sensors when Matter is unavailable. It is ignored when Matter is enabled for the bridge.                                                                               |     false     |       N        |
 | `enableHistory`    |  boolean |  Whether to enable Eve/fakegato history services for outlet power readings                                                                                                                                                  |     true      |       N        |
 
 **NOTE:** The `pollingFrequency` parameter defaults to 300 seconds, since Solax/QCells inverters update cloud data every 5 minutes.
@@ -89,6 +89,32 @@ Configuration parameters are described on the table below:
 Configuration through the the use of [Homebridge UI](https://github.com/oznu/homebridge-config-ui-x) plugin is also available and recommended:
 
 <img src="images/homebridge-ui.png" width="100%" height="100%">
+
+## Matter electrical sensors
+
+On Homebridge 2.4 or newer, the plugin exposes power readings as native Matter
+Electrical Sensor devices. The **AC** sensor also exposes cumulative generated
+energy. Matter support does not require `pureHomeApp`.
+
+To enable the sensors:
+
+1. Open **Homebridge UI > Plugins > Homebridge Solax Cloud API > Bridge Settings**.
+2. Enable **Matter**, save, and restart the plugin.
+3. Open the bridge settings again to display its Matter QR code.
+4. In Apple Home, select **Add Accessory** and scan the QR code.
+
+The plugin logs `Matter enabled - exposing native electrical sensors.` followed
+by one `Matter Electrical Sensor` creation message for each applicable meter.
+New sensors start at 0 W and receive data on the next successful Solax Cloud
+update (the default polling interval is five minutes). The already-paired Matter
+bridge does not need to be removed or paired again when sensors are added.
+
+Raw and smoothed readings are exposed as separate sensors by default. Disable
+`smoothMeters` if you do not want the additional smoothed sensors.
+
+When Matter is unavailable, enabling `pureHomeApp` provides the legacy Apple
+Home fallback by representing power readings as ambient light sensors. With
+Matter enabled, `pureHomeApp` is ignored and native electrical sensors are used.
 
 ## Non-standard characteristics
 
@@ -98,7 +124,7 @@ This will allow some non-standard characteristics to be visible along with its h
 
 <img src="images/plugin-outlet-consumption.png" width="50%" height="50%">
 
-If you want to rely solely on the native Home App, please enable the `pureHomeApp` config setting. In this case, power consumption on each meter will be exposed as an Ambient Light Sensor, as shown below (minimum value for an Ambient Light Sensor is 0.1 lux):
+If Matter is unavailable and you want to rely solely on the native Home App, enable the `pureHomeApp` config setting. This legacy fallback exposes power consumption on each meter as an Ambient Light Sensor (the minimum value for an Ambient Light Sensor is 0.1 lux):
 
 <img src="images/plugin-accessories-home-pure.png" width="50%" height="50%">
 
@@ -191,6 +217,7 @@ Next planned plugin releases should include:
 - [X] Consumption history through the [fakegato-history](https://github.com/simont77/fakegato-history) module
 - [x] Enable support for "pure" Home App accessories (power meters will be exposed as Ambient Light sensors)
 - [x] Add "smooth" accessories for power meters (compensating for sporadic scenarios like cloud a passing)
+- [x] Add native Matter support for power and energy readings
 - [x] Support for multiple inverters
 - [x] Support for multiple brands (between Solax and QCells)
 - [x] Accessories for battery state and consumptions

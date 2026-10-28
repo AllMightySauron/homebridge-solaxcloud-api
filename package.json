@@ -3,7 +3,7 @@
   "displayName": "Homebridge Solax Cloud API",
   "name": "homebridge-solaxcloud-api",
   "type": "module",
-  "version": "2.5.0",
+  "version": "2.5.1",
   "description": "Integrates solar production info using public Solax/QCells Cloud API into Homebridge accessories.",
   "license": "Apache-2.0",
   "repository": {
@@ -29,6 +29,7 @@
     "homebridge",
     "homebridge-plugin",
     "supports-matter",
+    "supports-hap",
     "solax",
     "qcells",
     "solaxcloud"

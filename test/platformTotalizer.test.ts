@@ -73,12 +73,12 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     assert.equal(totalizer.hasBattery, true);
   });
 
-  it('publishes only applicable meters through Matter', () => {
+  it('publishes and updates applicable meters through Matter without requiring pureHomeApp', async () => {
     const matter = createMatterApi();
     const config = {
       enableHistory: false,
-      pureHomeApp: true,
-      smoothMeters: false,
+      pureHomeApp: false,
+      smoothMeters: true,
       smoothingMethod: 'sma',
     } as PlatformConfig;
 
@@ -95,8 +95,42 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
       true,
     );
 
-    assert.equal(matter.registrations.length, 5);
+    assert.equal(matter.registrations.length, 10);
     assert.equal(inverter.getAccessories().length, 6);
+
+    inverter.setRawPower('inverterAC', 123.456);
+    inverter.setSmoothPower('inverterAC');
+    inverter.setRawEnergy('inverterAC', 12.345);
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.equal(matter.updates.filter(update =>
+      update.cluster === 'electricalPowerMeasurement' && update.attributes.activePower === 123456).length, 2);
+    assert.equal(matter.updates.some(update =>
+      update.cluster === 'electricalEnergyMeasurement'), true);
+  });
+
+  it('retains pureHomeApp as a non-Matter legacy fallback', () => {
+    const config = {
+      enableHistory: false,
+      pureHomeApp: true,
+      smoothMeters: false,
+      smoothingMethod: 'sma',
+    } as PlatformConfig;
+
+    const inverter = new SolaxCloudAPIPlatformInverter(
+      createLog(),
+      config,
+      createApi(),
+      0,
+      '',
+      'virtual',
+      'Virtual inverter',
+      false,
+      3,
+      true,
+    );
+
+    assert.equal(inverter.getAccessories().length, 11);
   });
 
   it('creates a virtual totalizer with QCells as brand when all inverters use QCells', () => {
