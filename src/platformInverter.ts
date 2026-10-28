@@ -107,6 +107,12 @@ export class SolaxCloudAPIPlatformInverter {
   private virtual: boolean;
 
   /**
+   * Whether power meters are exposed as Matter electrical sensors or legacy
+   * HomeKit ambient light sensors.
+   */
+  private readonly useNativePowerSensors: boolean;
+
+  /**
    * Virtual motion sensor triggered by data updates from Solax Cloud.
    */
   private motionUpdate!: SolaxMotionAccessory;
@@ -172,12 +178,20 @@ export class SolaxCloudAPIPlatformInverter {
     this.name = name;
     this.brandName = brandName;
     this.virtual = virtual;
+    this.useNativePowerSensors = Boolean(this.api.matter) || this.config.pureHomeApp === true;
 
     this.smoothingWindow = smoothingWindow;
     this.batteryInstalled = hasBattery;
 
     this.log.info(
       `Initialing acessories for inverter "${name}" (SN="${sn}") from ${this.brandName}...`);
+
+    if (this.api.matter) {
+      this.log.info('Matter enabled - exposing native electrical sensors.');
+    } else if (this.config.pureHomeApp) {
+      this.log.info(
+        'Matter unavailable - exposing legacy Apple Home power sensors as ambient light sensors.');
+    }
 
     let inverterModel = 'Unknown';
 
@@ -238,9 +252,10 @@ export class SolaxCloudAPIPlatformInverter {
       this.solaxAccessories.push(this.battery, this.rawOutlets.inverterFromBattery, this.rawOutlets.inverterToBattery);
     }
 
-    // check if "pure" Home App accessories are needed
-    if (this.config.pureHomeApp) {
-      // add raw light sensors
+    // Matter electrical sensors take precedence. Without Matter, pureHomeApp
+    // retains the legacy ambient-light-sensor fallback.
+    if (this.useNativePowerSensors) {
+      // add raw power sensors
       this.rawLightSensors = {
         pv: new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv} sensor`,
           `${ACCESSORY_SERIAL_PREFIXES.pv}-light-${this.sn}`, inverterModel),
@@ -272,7 +287,7 @@ export class SolaxCloudAPIPlatformInverter {
       }
 
       if (this.config.smoothMeters) {
-        // add smooth light sensors
+        // add smooth power sensors
         this.smoothLightSensors = {
           pv:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv} sensor (smooth)`,
@@ -455,7 +470,7 @@ export class SolaxCloudAPIPlatformInverter {
   public setRawPower(key: string, power: number) {
     this.rawOutlets[key].setPowerConsumption(power);
 
-    if (this.config.pureHomeApp) {
+    if (this.useNativePowerSensors) {
       this.rawLightSensors[key].setAmbientLightLevel(power);
     }
   }
@@ -477,7 +492,7 @@ export class SolaxCloudAPIPlatformInverter {
   public setRawEnergy(key: string, energy: number) {
     this.rawOutlets[key].setTotalEnergyConsumption(energy);
 
-    if (this.config.pureHomeApp) {
+    if (this.useNativePowerSensors) {
       this.rawLightSensors[key].setTotalEnergyConsumption(energy);
     }
   }
@@ -489,7 +504,7 @@ export class SolaxCloudAPIPlatformInverter {
   public setSmoothPower(key: string) {
     const smoothPower = this.rawOutlets[key].getSmoothPowerConsumption(this.config.smoothingMethod, this.smoothingWindow);
 
-    if (this.config.pureHomeApp) {
+    if (this.useNativePowerSensors) {
       this.smoothLightSensors[key].setAmbientLightLevel(smoothPower);
     } else {
       this.smoothOutlets[key].setPowerConsumption(smoothPower);

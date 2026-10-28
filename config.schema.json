@@ -95,11 +95,11 @@
         "description": "Statistical method for smoothing power consumption data."
       },
       "pureHomeApp": {
-          "title": "Add \"pure\" Home app accessories?",
+          "title": "Legacy Apple Home power sensors",
           "type": "boolean",
           "required": false,
           "default": false,
-          "description": "Enable this option to create light ambient sensors for power consumption."
+          "description": "Expose power as ambient light sensors when Matter is unavailable. This setting is ignored when Matter is enabled for the bridge."
       },
       "enableHistory": {
           "title": "Enable Eve history?",
