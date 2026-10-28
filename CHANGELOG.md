@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.3] - 2026-10-28
+### Changed
+* Renamed smoothed outlets and power sensors from `… (smooth)` to the HomeKit-compatible `… Smooth` convention.
+### Fixed
+* Preserved the previous HAP accessory UUIDs during the rename so rooms, scenes, and automations remain linked.
+
 ## [v2.5.2] - 2026-10-28
 ### Fixed
 * Restored smoothed outlet accessories when Matter electrical sensors are enabled.

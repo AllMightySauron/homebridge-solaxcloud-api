@@ -35,6 +35,11 @@ export class SolaxPlatformAccessory implements AccessoryPlugin {
   protected readonly displayName: string;
 
   /**
+   * Optional stable UUID seed used by Homebridge for accessory migrations.
+   */
+  public readonly uuid_base?: string;
+
+  /**
    * Real-world accessory serial number.
    */
   protected trueSerialNumber: string;
@@ -62,7 +67,7 @@ export class SolaxPlatformAccessory implements AccessoryPlugin {
    * @param {string} serial "Real-world" serial number for this accessory.
    * @param {string} model Accessory model.
    */
-  constructor(log: Logging, api: API, name: string, serialNumber: string, model: string) {
+  constructor(log: Logging, api: API, name: string, serialNumber: string, model: string, uuidBase?: string) {
     this.api = api;
     this.log = log;
 
@@ -71,6 +76,9 @@ export class SolaxPlatformAccessory implements AccessoryPlugin {
 
     // display name
     this.displayName = name;
+
+    // Keep the previous Homebridge UUID when an accessory is renamed.
+    this.uuid_base = uuidBase;
 
     // serial
     this.trueSerialNumber = serialNumber;
