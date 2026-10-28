@@ -18,6 +18,11 @@ interface InverterCreation {
   brandName?: string;
 }
 
+interface MigratedAccessory {
+  name: string;
+  uuid_base?: string;
+}
+
 let inverterCreations: InverterCreation[] = [];
 
 class TestSolaxCloudAPIPlatform extends SolaxCloudAPIPlatform {
@@ -97,6 +102,13 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     );
 
     assert.equal(matter.registrations.length, 10);
+    const smoothMatterSensors = matter.registrations
+      .flat()
+      .filter(accessory => accessory.serialNumber.includes('-light-smooth-'));
+
+    assert.equal(smoothMatterSensors.length, 5);
+    smoothMatterSensors.forEach(accessory => assert.match(accessory.displayName, / sensor Smooth$/));
+
     // Matter sensors are additive: raw and smooth outlets remain published.
     const outlets = inverter.getAccessories().filter(
       (accessory): accessory is SolaxOutletAccessory => accessory instanceof SolaxOutletAccessory,
@@ -139,6 +151,37 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     );
 
     assert.equal(inverter.getAccessories().length, 11);
+  });
+
+  it('renames smooth HAP accessories without changing their Homebridge UUID bases', () => {
+    const config = {
+      enableHistory: false,
+      pureHomeApp: true,
+      smoothMeters: true,
+      smoothingMethod: 'sma',
+    } as PlatformConfig;
+
+    const inverter = new SolaxCloudAPIPlatformInverter(
+      createLog(),
+      config,
+      createApi(),
+      0,
+      '',
+      'virtual',
+      'Virtual inverter',
+      false,
+      3,
+      true,
+    );
+
+    const migratedAccessories = (inverter.getAccessories() as unknown as MigratedAccessory[])
+      .filter(accessory => accessory.uuid_base !== undefined);
+
+    assert.equal(migratedAccessories.length, 10);
+    migratedAccessories.forEach(accessory => {
+      assert.match(accessory.name, / Smooth$/);
+      assert.equal(accessory.uuid_base, accessory.name.replace(/ Smooth$/, ' (smooth)'));
+    });
   });
 
   it('creates a virtual totalizer with QCells as brand when all inverters use QCells', () => {

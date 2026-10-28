@@ -41,8 +41,9 @@ export class SolaxLightSensorAccessory extends SolaxPlatformAccessory implements
     model: string,
     supportsEnergy = false,
     published = true,
+    uuidBase?: string,
   ) {
-    super(log, api, name, serial, model);
+    super(log, api, name, serial, model, uuidBase);
 
     this.log.debug(`Creating power sensor "${this.name}"`);
     this.published = published;

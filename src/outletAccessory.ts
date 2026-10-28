@@ -90,8 +90,8 @@ export class SolaxOutletAccessory extends SolaxPlatformAccessory implements Acce
    * @param {string} serial "Real world" serial number for this accessory.
    * @param {string} model Accessory model.
    */
-  constructor(log: Logging, api: API, name: string, serial: string, model: string, enableHistory = true) {
-    super(log, api, name, serial, model);
+  constructor(log: Logging, api: API, name: string, serial: string, model: string, enableHistory = true, uuidBase?: string) {
+    super(log, api, name, serial, model, uuidBase);
 
     this.log.debug(`Creating outlet "${this.name}"`);
 
