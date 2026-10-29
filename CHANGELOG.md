@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+### Changed
+* Assigned Matter electrical sensors their own `-matter` serial namespace instead of reusing legacy `pureHomeApp` light-sensor serials. Existing Matter sensors from v2.5.4 will be recreated once to prevent cross-mode cache collisions.
+
 ## [v2.5.4] - 2026-10-29
 ### Changed
 * Moved Matter electrical sensor ownership into each outlet accessory.

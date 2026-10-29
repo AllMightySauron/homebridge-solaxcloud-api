@@ -103,12 +103,16 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     );
 
     assert.equal(matter.registrations.length, 10);
-    const smoothMatterSensors = matter.registrations
-      .flat()
-      .filter(accessory => accessory.serialNumber.includes('-light-smooth-'));
+    const matterSensors = matter.registrations.flat();
+    const smoothMatterSensors = matterSensors
+      .filter(accessory => accessory.serialNumber.includes('-matter-smooth-'));
 
     assert.equal(smoothMatterSensors.length, 5);
     smoothMatterSensors.forEach(accessory => assert.match(accessory.displayName, / sensor Smooth$/));
+    matterSensors.forEach(accessory => {
+      assert.match(accessory.serialNumber, /-matter(?:-smooth)?-/);
+      assert.doesNotMatch(accessory.serialNumber, /-light(?:-smooth)?-/);
+    });
 
     // Each outlet owns its Matter sensor; no light-sensor accessory is published.
     const outlets = inverter.getAccessories().filter(

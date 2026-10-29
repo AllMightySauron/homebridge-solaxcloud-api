@@ -85,7 +85,7 @@ describe('SolaxOutletAccessory', () => {
       undefined,
       {
         displayName: 'Outlet sensor',
-        serialNumber: 'outlet-light-1',
+        serialNumber: 'outlet-matter-1',
         supportsEnergy: true,
       },
     );
@@ -94,7 +94,7 @@ describe('SolaxOutletAccessory', () => {
 
     const accessory = matter.registrations[0][0];
     assert.equal(accessory.displayName, 'Outlet sensor');
-    assert.equal(accessory.serialNumber, 'outlet-light-1');
+    assert.equal(accessory.serialNumber, 'outlet-matter-1');
     assert.equal(accessory.deviceType, matter.api.deviceTypes.ElectricalSensor);
     assert.deepEqual(accessory.clusters, {
       electricalPowerMeasurement: { activePower: 0 },
