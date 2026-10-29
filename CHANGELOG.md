@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.5.4] - 2026-10-29
+### Changed
+* Moved Matter electrical sensor ownership into each outlet accessory.
+* Kept legacy HAP light sensors exclusive to the `pureHomeApp` fallback when Matter is unavailable.
+### Fixed
+* Propagated raw and smoothed outlet power updates directly to their corresponding Matter electrical sensors.
+* Avoided publishing battery Matter sensors when the inverter has no battery.
+
 ## [v2.5.3] - 2026-10-28
 ### Changed
 * Renamed smoothed outlets and power sensors from `… (smooth)` to the HomeKit-compatible `… Smooth` convention.

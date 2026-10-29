@@ -3,6 +3,7 @@ import { API, Logging, PlatformConfig } from 'homebridge';
 import assert from 'assert';
 
 import { SolaxOutletAccessory } from '../src/outletAccessory.js';
+import { SolaxLightSensorAccessory } from '../src/lightSensorAccessory.js';
 import { SolaxCloudAPIPlatform } from '../src/platform.js';
 import { SolaxCloudAPIPlatformInverter } from '../src/platformInverter.js';
 import { createApi, createLog, createMatterApi } from './helpers.js';
@@ -109,13 +110,14 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     assert.equal(smoothMatterSensors.length, 5);
     smoothMatterSensors.forEach(accessory => assert.match(accessory.displayName, / sensor Smooth$/));
 
-    // Matter sensors are additive: raw and smooth outlets remain published.
+    // Each outlet owns its Matter sensor; no light-sensor accessory is published.
     const outlets = inverter.getAccessories().filter(
       (accessory): accessory is SolaxOutletAccessory => accessory instanceof SolaxOutletAccessory,
     );
 
     assert.equal(inverter.getAccessories().length, 11);
     assert.equal(outlets.length, 10);
+    assert.equal(inverter.getAccessories().some(accessory => accessory instanceof SolaxLightSensorAccessory), false);
 
     inverter.setRawPower('inverterAC', 123.456);
     inverter.setSmoothPower('inverterAC');
@@ -151,6 +153,34 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     );
 
     assert.equal(inverter.getAccessories().length, 11);
+    assert.equal(inverter.getAccessories().filter(accessory => accessory instanceof SolaxLightSensorAccessory).length, 5);
+  });
+
+  it('uses Matter outlets instead of pureHomeApp light sensors when both are configured', () => {
+    const matter = createMatterApi();
+    const config = {
+      enableHistory: false,
+      pureHomeApp: true,
+      smoothMeters: false,
+      smoothingMethod: 'sma',
+    } as PlatformConfig;
+
+    const inverter = new SolaxCloudAPIPlatformInverter(
+      createLog(),
+      config,
+      createApi(matter.api),
+      0,
+      '',
+      'virtual',
+      'Virtual inverter',
+      false,
+      3,
+      true,
+    );
+
+    assert.equal(matter.registrations.length, 5);
+    assert.equal(inverter.getAccessories().length, 6);
+    assert.equal(inverter.getAccessories().some(accessory => accessory instanceof SolaxLightSensorAccessory), false);
   });
 
   it('renames smooth HAP accessories without changing their Homebridge UUID bases', () => {

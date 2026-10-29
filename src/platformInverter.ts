@@ -3,7 +3,7 @@ import { createRequire } from 'module';
 
 import type { SolaxCloudAPI as SolaxCloudAPIClient, SolaxCloudAPIResponse } from 'solax-cloud-api';
 
-import { SolaxOutletAccessory } from './outletAccessory.js';
+import { MatterPowerSensorOptions, SolaxOutletAccessory } from './outletAccessory.js';
 import { SolaxLightSensorAccessory } from './lightSensorAccessory.js';
 
 import { PlatformLightSensorMeters, PlatformOutletMeters } from './platformMeters.js';
@@ -33,7 +33,7 @@ export const ACCESSORY_KEYS = {
   inverterToGrid: 'inverterToGrid',
   inverterToHouse: 'inverterToHouse',
   gridToHouse: 'gridToHouse',
-};
+} as const;
 
 /**
  * Standard names for accessories.
@@ -106,11 +106,8 @@ export class SolaxCloudAPIPlatformInverter {
    */
   private virtual: boolean;
 
-  /**
-   * Whether power meters are exposed as Matter electrical sensors or legacy
-   * HomeKit ambient light sensors.
-   */
-  private readonly useNativePowerSensors: boolean;
+  /** Whether legacy ambient-light power sensors are enabled for pure Home. */
+  private readonly useLegacyLightSensors: boolean;
 
   /**
    * Virtual motion sensor triggered by data updates from Solax Cloud.
@@ -178,7 +175,7 @@ export class SolaxCloudAPIPlatformInverter {
     this.name = name;
     this.brandName = brandName;
     this.virtual = virtual;
-    this.useNativePowerSensors = Boolean(this.api.matter) || this.config.pureHomeApp === true;
+    this.useLegacyLightSensors = !this.api.matter && this.config.pureHomeApp === true;
 
     this.smoothingWindow = smoothingWindow;
     this.batteryInstalled = hasBattery;
@@ -216,25 +213,32 @@ export class SolaxCloudAPIPlatformInverter {
     this.rawOutlets = {
       pv:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv}`,
-          `${ACCESSORY_SERIAL_PREFIXES.pv}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.pv}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.getMatterSensorOptions(ACCESSORY_KEYS.pv)),
       inverterFromBattery:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterFromBattery}`,
-          `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.batteryInstalled ? this.getMatterSensorOptions(ACCESSORY_KEYS.inverterFromBattery) : undefined),
       inverterToBattery:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToBattery}`,
-          `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.batteryInstalled ? this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToBattery) : undefined),
       inverterAC:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterAC}`,
-          `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.getMatterSensorOptions(ACCESSORY_KEYS.inverterAC, false, true)),
       inverterToGrid:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToGrid}`,
-          `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToGrid)),
       inverterToHouse:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToHouse}`,
-          `${ACCESSORY_SERIAL_PREFIXES.inverterToHouse}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.inverterToHouse}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToHouse)),
       gridToHouse:
         new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.gridToHouse}`,
-          `${ACCESSORY_SERIAL_PREFIXES.gridToHouse}-${this.sn}`, inverterModel, this.config.enableHistory),
+          `${ACCESSORY_SERIAL_PREFIXES.gridToHouse}-${this.sn}`, inverterModel, this.config.enableHistory, undefined,
+          this.getMatterSensorOptions(ACCESSORY_KEYS.gridToHouse)),
     };
 
     // setup update motion sensor
@@ -252,22 +256,20 @@ export class SolaxCloudAPIPlatformInverter {
       this.solaxAccessories.push(this.battery, this.rawOutlets.inverterFromBattery, this.rawOutlets.inverterToBattery);
     }
 
-    // Matter electrical sensors take precedence. Without Matter, pureHomeApp
-    // retains the legacy ambient-light-sensor fallback.
-    if (this.useNativePowerSensors) {
+    if (this.useLegacyLightSensors) {
       // add raw power sensors
       this.rawLightSensors = {
         pv: new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv} sensor`,
           `${ACCESSORY_SERIAL_PREFIXES.pv}-light-${this.sn}`, inverterModel),
         inverterFromBattery:
           new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} sensor`,
-            `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-light-${this.sn}`, inverterModel, false, this.batteryInstalled),
+            `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-light-${this.sn}`, inverterModel, this.batteryInstalled),
         inverterToBattery:
           new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToBattery} sensor`,
-            `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-light-${this.sn}`, inverterModel, false, this.batteryInstalled),
+            `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-light-${this.sn}`, inverterModel, this.batteryInstalled),
         inverterAC:
           new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterAC} sensor`,
-            `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-light-${this.sn}`, inverterModel, true),
+            `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-light-${this.sn}`, inverterModel),
         inverterToGrid:
           new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToGrid} sensor`,
             `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-light-${this.sn}`, inverterModel),
@@ -291,31 +293,31 @@ export class SolaxCloudAPIPlatformInverter {
         this.smoothLightSensors = {
           pv:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.pv}-light-smooth-${this.sn}`, inverterModel, false, true,
+              `${ACCESSORY_SERIAL_PREFIXES.pv}-light-smooth-${this.sn}`, inverterModel, true,
               `${this.name} ${ACCESSORY_NAMES.pv} sensor (smooth)`),
           inverterFromBattery:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-light-smooth-${this.sn}`, inverterModel, false, this.batteryInstalled,
+              `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-light-smooth-${this.sn}`, inverterModel, this.batteryInstalled,
               `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} sensor (smooth)`),
           inverterToBattery:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToBattery} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-light-smooth-${this.sn}`, inverterModel, false, this.batteryInstalled,
+              `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-light-smooth-${this.sn}`, inverterModel, this.batteryInstalled,
               `${this.name} ${ACCESSORY_NAMES.inverterToBattery} sensor (smooth)`),
           inverterAC:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterAC} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-light-smooth-${this.sn}`, inverterModel, false, true,
+              `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-light-smooth-${this.sn}`, inverterModel, true,
               `${this.name} ${ACCESSORY_NAMES.inverterAC} sensor (smooth)`),
           inverterToGrid:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToGrid} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-light-smooth-${this.sn}`, inverterModel, false, true,
+              `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-light-smooth-${this.sn}`, inverterModel, true,
               `${this.name} ${ACCESSORY_NAMES.inverterToGrid} sensor (smooth)`),
           inverterToHouse:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToHouse} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.inverterToHouse}-light-smooth-${this.sn}`, inverterModel, false, true,
+              `${ACCESSORY_SERIAL_PREFIXES.inverterToHouse}-light-smooth-${this.sn}`, inverterModel, true,
               `${this.name} ${ACCESSORY_NAMES.inverterToHouse} sensor (smooth)`),
           gridToHouse:
             new SolaxLightSensorAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.gridToHouse} sensor Smooth`,
-              `${ACCESSORY_SERIAL_PREFIXES.gridToHouse}-light-smooth-${this.sn}`, inverterModel, false, true,
+              `${ACCESSORY_SERIAL_PREFIXES.gridToHouse}-light-smooth-${this.sn}`, inverterModel, true,
               `${this.name} ${ACCESSORY_NAMES.gridToHouse} sensor (smooth)`),
         };
 
@@ -334,31 +336,35 @@ export class SolaxCloudAPIPlatformInverter {
         pv:
           new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.pv} Smooth`,
             `${ACCESSORY_SERIAL_PREFIXES.pv}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-            `${this.name} ${ACCESSORY_NAMES.pv} (smooth)`),
+            `${this.name} ${ACCESSORY_NAMES.pv} (smooth)`, this.getMatterSensorOptions(ACCESSORY_KEYS.pv, true)),
         inverterFromBattery:
           new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} Smooth`,
             `${ACCESSORY_SERIAL_PREFIXES.inverterFromBattery}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-            `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} (smooth)`),
+            `${this.name} ${ACCESSORY_NAMES.inverterFromBattery} (smooth)`,
+            this.batteryInstalled ? this.getMatterSensorOptions(ACCESSORY_KEYS.inverterFromBattery, true) : undefined),
         inverterToBattery:
           new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToBattery} Smooth`,
             `${ACCESSORY_SERIAL_PREFIXES.inverterToBattery}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-            `${this.name} ${ACCESSORY_NAMES.inverterToBattery} (smooth)`),
+            `${this.name} ${ACCESSORY_NAMES.inverterToBattery} (smooth)`,
+            this.batteryInstalled ? this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToBattery, true) : undefined),
         inverterAC:
           new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterAC} Smooth`,
             `${ACCESSORY_SERIAL_PREFIXES.inverterAC}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-            `${this.name} ${ACCESSORY_NAMES.inverterAC} (smooth)`),
+            `${this.name} ${ACCESSORY_NAMES.inverterAC} (smooth)`, this.getMatterSensorOptions(ACCESSORY_KEYS.inverterAC, true)),
         inverterToGrid:
             new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToGrid} Smooth`,
               `${ACCESSORY_SERIAL_PREFIXES.inverterToGrid}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-              `${this.name} ${ACCESSORY_NAMES.inverterToGrid} (smooth)`),
+              `${this.name} ${ACCESSORY_NAMES.inverterToGrid} (smooth)`,
+              this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToGrid, true)),
         inverterToHouse:
             new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.inverterToHouse} Smooth`,
               `${ACCESSORY_SERIAL_PREFIXES.inverterToHouse}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-              `${this.name} ${ACCESSORY_NAMES.inverterToHouse} (smooth)`),
+              `${this.name} ${ACCESSORY_NAMES.inverterToHouse} (smooth)`,
+              this.getMatterSensorOptions(ACCESSORY_KEYS.inverterToHouse, true)),
         gridToHouse:
             new SolaxOutletAccessory(this.log, this.api, `${this.name} ${ACCESSORY_NAMES.gridToHouse} Smooth`,
               `${ACCESSORY_SERIAL_PREFIXES.gridToHouse}-smooth-${this.sn}`, inverterModel, this.config.enableHistory,
-              `${this.name} ${ACCESSORY_NAMES.gridToHouse} (smooth)`),
+              `${this.name} ${ACCESSORY_NAMES.gridToHouse} (smooth)`, this.getMatterSensorOptions(ACCESSORY_KEYS.gridToHouse, true)),
       };
 
       this.solaxAccessories.push(this.smoothOutlets.pv, this.smoothOutlets.inverterAC, this.smoothOutlets.inverterToGrid,
@@ -383,6 +389,21 @@ export class SolaxCloudAPIPlatformInverter {
       default:
         return 'Solax';
     }
+  }
+
+  private getMatterSensorOptions(
+    key: keyof typeof ACCESSORY_NAMES,
+    smooth = false,
+    supportsEnergy = false,
+  ): MatterPowerSensorOptions {
+    const smoothSuffix = smooth ? ' Smooth' : '';
+    const serialSmoothSegment = smooth ? '-smooth' : '';
+
+    return {
+      displayName: `${this.name} ${ACCESSORY_NAMES[key]} sensor${smoothSuffix}`,
+      serialNumber: `${ACCESSORY_SERIAL_PREFIXES[key]}-light${serialSmoothSegment}-${this.sn}`,
+      supportsEnergy,
+    };
   }
 
   /**
@@ -484,7 +505,7 @@ export class SolaxCloudAPIPlatformInverter {
   public setRawPower(key: string, power: number) {
     this.rawOutlets[key].setPowerConsumption(power);
 
-    if (this.useNativePowerSensors) {
+    if (this.useLegacyLightSensors) {
       this.rawLightSensors[key].setAmbientLightLevel(power);
     }
   }
@@ -506,9 +527,6 @@ export class SolaxCloudAPIPlatformInverter {
   public setRawEnergy(key: string, energy: number) {
     this.rawOutlets[key].setTotalEnergyConsumption(energy);
 
-    if (this.useNativePowerSensors) {
-      this.rawLightSensors[key].setTotalEnergyConsumption(energy);
-    }
   }
 
   /**
@@ -518,7 +536,7 @@ export class SolaxCloudAPIPlatformInverter {
   public setSmoothPower(key: string) {
     const smoothPower = this.rawOutlets[key].getSmoothPowerConsumption(this.config.smoothingMethod, this.smoothingWindow);
 
-    if (this.useNativePowerSensors) {
+    if (this.useLegacyLightSensors) {
       this.smoothLightSensors[key].setAmbientLightLevel(smoothPower);
     }
 
@@ -565,8 +583,7 @@ export class SolaxCloudAPIPlatformInverter {
    * @returns {AccessoryPlugin[]} Array of accessories for this inverter.
    */
   public getAccessories(): AccessoryPlugin[] {
-    return this.solaxAccessories.filter(accessory =>
-      !(accessory instanceof SolaxLightSensorAccessory && accessory.isMatterAccessory()));
+    return this.solaxAccessories;
   }
 
 }
