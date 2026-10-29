@@ -1,6 +1,16 @@
-import { Service, AccessoryPlugin, Logging, Characteristic, CharacteristicGetCallback, API } from 'homebridge';
+import {
+  Service,
+  AccessoryPlugin,
+  Logging,
+  Characteristic,
+  CharacteristicGetCallback,
+  API,
+  MatterAccessory,
+  MatterAPI,
+} from 'homebridge';
 
 import { SolaxPlatformAccessory } from './platformAccessory.js';
+import { PLATFORM_NAME, PLUGIN_NAME } from './settings.js';
 
 import { Statistics } from './statistics.js';
 
@@ -25,6 +35,12 @@ const { EveHomeKitTypes } = require('homebridge-lib/EveHomeKitTypes') as {
   EveHomeKitTypes: new (api: API) => EveHomeKitTypes;
 };
 
+export interface MatterPowerSensorOptions {
+  displayName: string;
+  serialNumber: string;
+  supportsEnergy?: boolean;
+}
+
 /**
  * Maximum size for the outlet power series.
  */
@@ -36,6 +52,15 @@ const MAX_POWER_SERIES_SIZE = 1024;
  * Outlet use is inferred from a positive power comsumption.
  */
 export class SolaxOutletAccessory extends SolaxPlatformAccessory implements AccessoryPlugin {
+
+  /** Matter API used to publish the outlet's native electrical sensor. */
+  private readonly matterApi?: MatterAPI;
+
+  /** Stable UUID for the outlet's native Matter electrical sensor. */
+  private readonly matterUuid?: string;
+
+  /** Resolves after the native Matter electrical sensor registration finishes. */
+  private readonly matterRegistration?: Promise<boolean>;
 
   /**
    * Eve Homekit types helper
@@ -90,7 +115,16 @@ export class SolaxOutletAccessory extends SolaxPlatformAccessory implements Acce
    * @param {string} serial "Real world" serial number for this accessory.
    * @param {string} model Accessory model.
    */
-  constructor(log: Logging, api: API, name: string, serial: string, model: string, enableHistory = true, uuidBase?: string) {
+  constructor(
+    log: Logging,
+    api: API,
+    name: string,
+    serial: string,
+    model: string,
+    enableHistory = true,
+    uuidBase?: string,
+    matterSensor?: MatterPowerSensorOptions,
+  ) {
     super(log, api, name, serial, model, uuidBase);
 
     this.log.debug(`Creating outlet "${this.name}"`);
@@ -122,6 +156,46 @@ export class SolaxOutletAccessory extends SolaxPlatformAccessory implements Acce
       // history logging services
       this.eveService = fakegato(this.api);
       this.loggingService = new this.eveService('energy', this, { storage: 'fs', log: this.log, disableRepeatLastData: true } );
+    }
+
+    this.matterApi = this.api.matter;
+
+    if (this.matterApi && matterSensor) {
+      this.matterUuid = this.api.hap.uuid.generate(matterSensor.serialNumber + '-matter-power');
+
+      const clusters: MatterAccessory['clusters'] = {
+        electricalPowerMeasurement: {
+          activePower: 0,
+        },
+      };
+
+      if (matterSensor.supportsEnergy) {
+        clusters.electricalEnergyMeasurement = {
+          cumulativeEnergyExported: { energy: 0 },
+        };
+      }
+
+      const matterAccessory: MatterAccessory = {
+        displayName: matterSensor.displayName,
+        UUID: this.matterUuid,
+        deviceType: this.matterApi.deviceTypes.ElectricalSensor,
+        serialNumber: matterSensor.serialNumber,
+        manufacturer: 'Solax',
+        model,
+        context: {},
+        clusters,
+      };
+
+      this.matterRegistration = this.matterApi
+        .registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [matterAccessory])
+        .then(() => {
+          log.info(`Matter Electrical Sensor (Watts) "${matterSensor.displayName}" created!`);
+          return true;
+        })
+        .catch(error => {
+          log.error(`Failed to register Matter accessory "${matterSensor.displayName}": ${error}`);
+          return false;
+        });
     }
 
     log.info(`Outlet "${name}" created!`);
@@ -230,6 +304,13 @@ export class SolaxOutletAccessory extends SolaxPlatformAccessory implements Acce
 
     // add new value to power series
     this.addPowerEntry(this.powerConsumption);
+
+    if (this.matterApi) {
+      this.updateMatterState(
+        this.matterApi.clusterNames.ElectricalPowerMeasurement,
+        { activePower: Math.round(this.powerConsumption * 1000) },
+      );
+    }
   }
 
   /**
@@ -259,6 +340,35 @@ export class SolaxOutletAccessory extends SolaxPlatformAccessory implements Acce
     this.totalEnergyConsumption = totalEnergyConsumption;
 
     this.outletService.getCharacteristic(this.eve.Characteristics.TotalConsumption).updateValue(this.totalEnergyConsumption);
+
+    if (this.matterApi) {
+      this.updateMatterState(
+        this.matterApi.clusterNames.ElectricalEnergyMeasurement,
+        {
+          cumulativeEnergyExported: {
+            energy: Math.round(totalEnergyConsumption * 1000),
+          },
+        },
+      );
+    }
+  }
+
+  private updateMatterState(cluster: string, attributes: Record<string, unknown>): void {
+    if (!this.matterApi || !this.matterUuid || !this.matterRegistration) {
+      return;
+    }
+
+    void this.matterRegistration
+      .then(registered => {
+        if (!registered) {
+          return;
+        }
+
+        return this.matterApi!.updateAccessoryState(this.matterUuid!, cluster, attributes);
+      })
+      .catch(error => {
+        this.log.error(`Failed to update Matter accessory for outlet "${this.name}": ${error}`);
+      });
   }
 
   /**

@@ -1,6 +1,6 @@
 import assert from 'assert';
 import { SolaxOutletAccessory } from '../src/outletAccessory.js';
-import { createApi, createLog } from './helpers.js';
+import { createApi, createLog, createMatterApi } from './helpers.js';
 
 describe('SolaxOutletAccessory', () => {
   function withOutlet(test: (outlet: SolaxOutletAccessory) => void): void {
@@ -71,5 +71,55 @@ describe('SolaxOutletAccessory', () => {
 
     assert.equal(outlet.getPowerConsumptionValue(), 42);
     assert.equal(outlet.getServices().length, 2);
+  });
+
+  it('owns and updates its Matter electrical sensor', async () => {
+    const matter = createMatterApi();
+    const outlet = new SolaxOutletAccessory(
+      createLog(),
+      createApi(matter.api),
+      'Outlet',
+      'outlet-1',
+      'Model',
+      false,
+      undefined,
+      {
+        displayName: 'Outlet sensor',
+        serialNumber: 'outlet-light-1',
+        supportsEnergy: true,
+      },
+    );
+
+    assert.equal(matter.registrations.length, 1);
+
+    const accessory = matter.registrations[0][0];
+    assert.equal(accessory.displayName, 'Outlet sensor');
+    assert.equal(accessory.serialNumber, 'outlet-light-1');
+    assert.equal(accessory.deviceType, matter.api.deviceTypes.ElectricalSensor);
+    assert.deepEqual(accessory.clusters, {
+      electricalPowerMeasurement: { activePower: 0 },
+      electricalEnergyMeasurement: {
+        cumulativeEnergyExported: { energy: 0 },
+      },
+    });
+
+    outlet.setPowerConsumption(123.456);
+    outlet.setTotalEnergyConsumption(12.345);
+    await new Promise(resolve => setImmediate(resolve));
+
+    assert.deepEqual(matter.updates, [
+      {
+        uuid: accessory.UUID,
+        cluster: 'electricalPowerMeasurement',
+        attributes: { activePower: 123456 },
+      },
+      {
+        uuid: accessory.UUID,
+        cluster: 'electricalEnergyMeasurement',
+        attributes: {
+          cumulativeEnergyExported: { energy: 12345 },
+        },
+      },
+    ]);
   });
 });
