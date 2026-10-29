@@ -401,7 +401,7 @@ export class SolaxCloudAPIPlatformInverter {
 
     return {
       displayName: `${this.name} ${ACCESSORY_NAMES[key]} sensor${smoothSuffix}`,
-      serialNumber: `${ACCESSORY_SERIAL_PREFIXES[key]}-light${serialSmoothSegment}-${this.sn}`,
+      serialNumber: `${ACCESSORY_SERIAL_PREFIXES[key]}-matter${serialSmoothSegment}-${this.sn}`,
       supportsEnergy,
     };
   }
