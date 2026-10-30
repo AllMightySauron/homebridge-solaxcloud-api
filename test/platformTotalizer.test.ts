@@ -105,12 +105,13 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     assert.equal(matter.registrations.length, 10);
     const matterSensors = matter.registrations.flat();
     const smoothMatterSensors = matterSensors
-      .filter(accessory => accessory.serialNumber.includes('-matter-smooth-'));
+      .filter(accessory => accessory.serialNumber.includes('-matter-sm-'));
 
     assert.equal(smoothMatterSensors.length, 5);
     smoothMatterSensors.forEach(accessory => assert.match(accessory.displayName, / sensor Smooth$/));
     matterSensors.forEach(accessory => {
-      assert.match(accessory.serialNumber, /-matter(?:-smooth)?-/);
+      assert.match(accessory.serialNumber, /-matter(?:-sm)?-/);
+      assert.ok(accessory.serialNumber.length <= 32);
       assert.doesNotMatch(accessory.serialNumber, /-light(?:-smooth)?-/);
     });
 
@@ -133,6 +134,37 @@ describe('SolaxCloudAPIPlatform totalizer inverter creation', () => {
     assert.equal(outlets.filter(outlet => outlet.getPowerConsumptionValue() === 123.456).length, 2);
     assert.equal(matter.updates.some(update =>
       update.cluster === 'electricalEnergyMeasurement'), true);
+  });
+
+  it('keeps Matter serial numbers within the 32-character limit', () => {
+    const matter = createMatterApi();
+    const config = {
+      enableHistory: false,
+      pureHomeApp: false,
+      smoothMeters: true,
+      smoothingMethod: 'sma',
+    } as PlatformConfig;
+
+    new SolaxCloudAPIPlatformInverter(
+      createLog(),
+      config,
+      createApi(matter.api),
+      0,
+      '',
+      'swxgxcqjbt',
+      'Test inverter',
+      true,
+      3,
+      true,
+    );
+
+    const matterSensors = matter.registrations.flat();
+    const smoothMatterSensors = matterSensors
+      .filter(accessory => accessory.serialNumber.includes('-matter-sm-'));
+
+    assert.equal(matterSensors.length, 14);
+    assert.equal(smoothMatterSensors.length, 7);
+    matterSensors.forEach(accessory => assert.ok(accessory.serialNumber.length <= 32));
   });
 
   it('retains pureHomeApp as a non-Matter legacy fallback', () => {
