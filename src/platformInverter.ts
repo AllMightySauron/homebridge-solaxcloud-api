@@ -397,7 +397,7 @@ export class SolaxCloudAPIPlatformInverter {
     supportsEnergy = false,
   ): MatterPowerSensorOptions {
     const smoothSuffix = smooth ? ' Smooth' : '';
-    const serialSmoothSegment = smooth ? '-smooth' : '';
+    const serialSmoothSegment = smooth ? '-sm' : '';
 
     return {
       displayName: `${this.name} ${ACCESSORY_NAMES[key]} sensor${smoothSuffix}`,
